@@ -6,15 +6,8 @@
 #include <utility>
 #include <string>
 
-
-
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
-
-
-//#include <boost/iostreams/device/file.hpp>
-//#include <boost/iostreams/stream.hpp>
-
 
 typedef boost::iostreams::filtering_ostream OutStream;
 
@@ -67,8 +60,8 @@ int openBarcodeStreams(const std::string& filename, const std::string& prefix)
     boost::split(fields, str, boost::is_any_of(" ,"));
     std::string sample_name = fields[0];
     std::string barcode = fields[1];
-    
-    barcodes[barcode] = addStream( prefix + "-" + sample_name + ".fq.gz" );
+    std::string output_file = prefix + "-" + sample_name + ".fq.gz";
+    barcodes[barcode] = addStream(output_file);
     reads[barcode] = std::make_pair(sample_name, 0);
     
     std::cerr << "File " << sample_name << " for " << barcode << std::endl;
@@ -124,22 +117,28 @@ int parseFastQFile(const std::string& fq_file)
 
       std::string sample_id = fields[1];
       
+      // Increment sample id
+      {
+        auto read_it = reads.find(sample_id);
+        auto& sample_reads = read_it == reads.end() ? reads.at(undetermined).second : read_it->second.second;
+        ++sample_reads;
+      }
+
+      // Forward record to the relevant file
       auto it = barcodes.find(sample_id);
       auto stream = it == barcodes.end() ? barcodes.at(undetermined) : it->second;
-
-      
       *stream << str << std::endl;
-
-      
       std::string tmp;
-      for (int i = 0; i < 3 && std::getline(in,tmp); ++i, lines++)
+      for (int i = 0; i < 3 && std::getline(in,tmp); ++i, ++lines)
       {
         *stream << tmp << std::endl;
       }
-        
+
+      
+      // Report progress
       if (++records % 30000 == 0)
       {
-        std::cerr << "written " << records << " so far" << "\r";
+        std::cerr << "Read " << records << " records so far" << "\r";
       }
       
     }
@@ -149,12 +148,8 @@ int parseFastQFile(const std::string& fq_file)
   {
     std::cerr << e.what() << std::endl;
   }
-
   
-  
-  std::cerr << "written " << records << " so far" << std::endl;
-  
-  
+  std::cerr << "Written " << records << " reads in total!" << std::endl;
   std::cerr << "Flushing buffers" << std::endl;
   for(auto& b : barcodes)
   {
@@ -171,27 +166,25 @@ void exportReadsPerSample(const std::string & exp_name)
   std::string filename = exp_name + "-report.csv";
   std::ofstream csv(filename.c_str());
   csv << "SampleName,Reads" <<std::endl;
-  for (auto& sample : reads) {
-    csv << sample.second.first << sample.second.first << std::endl;
+  for (auto& sample : reads)
+  {
+    csv << sample.second.first << "," << sample.second.second << std::endl;
   }
   csv.close();
 }
 
 int main(int argc, char* argv[])
 {
-  if (argc != 3)
+  if (argc != 4)
   {
-    std::cerr << "Usage:" << argv[0] << " <UMI_TOOLS input fastq file> <manifest.csv (sample_name, barcode)>" << std::endl;
+    std::cerr << "Usage:" << argv[0] << " <UMI_TOOLS input fastq file> <manifest.csv (sample_name, barcode)> <output-prefix>" << std::endl;
     return 1;
   }
-  std::string fq_file = argv[1];
   
-  std::string experiment_name = fq_file;
-  experiment_name.erase(
-      experiment_name.begin() + experiment_name.find_last_of(".fq.gz"),
-      experiment_name.end());
-
-  if (openBarcodeStreams(argv[2], experiment_name)) {
+  std::string fq_file = argv[1];
+  std::string manifest = argv[2];
+  std::string output_prefix = argv[3];
+  if (openBarcodeStreams(manifest, output_prefix)) {
     std::cerr << "Error in loading barcode file " << std::endl;
     return 1;
   }
@@ -200,10 +193,9 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  exportReadsPerSample(experiment_name);
+  exportReadsPerSample(output_prefix);
   
   //std::ofstream outStream("test.out.gz", std::ios_base::binary);
-
   return 0;
 
 }
