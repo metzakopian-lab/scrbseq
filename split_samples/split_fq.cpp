@@ -97,24 +97,31 @@ int parseFastQFile(const std::string& fq_file)
     in.push(ifile);
     
     long lines = 0;
-    for (std::string str; std::getline(in,str);++lines)
+    std::string read_name(256), bases(256), qualities(256), extra(256);
+    while (in.good())
     {
       //and str.find("_") != std::string::npos
-      if ( not (lines % 4 == 0 and !str.empty() and str[0] == '@'))
+      std::getline(in, read_name);
+      std::getline(in, bases);
+      std::getline(in, qualities);
+      std::getline(in, extra);
+      
+      if ( not (lines % 4 == 0 and !str.empty() and read_name[0] == '@'))
       {
-        continue;
+        std::cerr << "Error reading in FastQ file" << std::endl;
+        return 1;
       }
+
+      
       std::vector<std::string> fields;
-      boost::split(fields, str, boost::is_any_of("_"));
+      boost::split(fields, read_name, boost::is_any_of("_"));
       if(fields.size() < 2)
       {
         std::cerr << str << std::endl;
         std::cerr <<  "Line not properly formatted, did UMI tools run? " << std::endl;
         return 1;
       }
-
-
-
+      
       std::string sample_id = fields[1];
       
       // Increment sample id
@@ -127,16 +134,17 @@ int parseFastQFile(const std::string& fq_file)
       // Forward record to the relevant file
       auto it = barcodes.find(sample_id);
       auto stream = it == barcodes.end() ? barcodes.at(undetermined) : it->second;
-      *stream << str << std::endl;
-      std::string tmp;
-      for (int i = 0; i < 3 && std::getline(in,tmp); ++i, ++lines)
+      
+      if (bases.size() > 8)
       {
-        *stream << tmp << std::endl;
+        *stream << read_name << std::endl;
+        *stream << bases << std::endl;
+        *stream << qualities << std::endl;
+        *stream << extra << std::endl;
       }
-
       
       // Report progress
-      if (++records % 30000 == 0)
+      if (++records % 50000 == 0)
       {
         std::cerr << "Read " << records << " records so far" << "\r";
       }
