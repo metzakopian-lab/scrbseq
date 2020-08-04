@@ -8,13 +8,13 @@
 
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/device/file.hpp> 
+#include <boost/iostreams/device/file.hpp>
+/// 64MB buffer size
+#define BUFFER_SIZE 2 << 26 
+
 
 typedef boost::iostreams::filtering_ostream OutStream;
-
-
 typedef std::unordered_map<std::string, OutStream*> Streams;
-
 typedef std::unordered_map<std::string, std::pair<std::string, unsigned int>> Counts;
 
 
@@ -32,7 +32,7 @@ OutStream* addStream(const std::string& filename)
 {
   // http://boost.2283326.n4.nabble.com/Writing-large-binary-files-with-boost-gzip-td3434404.html
   OutStream *out = new OutStream();
-  out->push(boost::iostreams::gzip_compressor());
+  out->push(boost::iostreams::gzip_compressor(boost::iostreams::zlib::default_compression, BUFFER_SIZE));
   out->push(boost::iostreams::file_sink(filename));
   return out;
 }
@@ -89,7 +89,7 @@ int parseFastQFile(const std::string& fq_file)
 
     
     boost::iostreams::filtering_istream in;
-    in.push(boost::iostreams::gzip_decompressor());
+    in.push(boost::iostreams::gzip_decompressor(boost::iostreams::zlib::default_window_bits, 4*BUFFER_SIZE));
     in.push(boost::iostreams::file_source(fq_file));
     
     long lines = 0;
@@ -98,7 +98,7 @@ int parseFastQFile(const std::string& fq_file)
     bases.reserve(256);
     qualities.reserve(256);
     extra.reserve(256);
-    while (in.good())
+    while (in.good() and records < 10000000)
     {
       //and str.find("_") != std::string::npos
       std::getline(in, read_name);
@@ -144,9 +144,9 @@ int parseFastQFile(const std::string& fq_file)
       }
       
       // Report progress
-      if (++records % 50000 == 0)
+      if (++records % 500000 == 0)
       {
-        std::cerr << "Read " << records << " records so far" << "\r";
+        std::cerr << "Read " << records << " records so far" << std::endl;
       }
       
     }
