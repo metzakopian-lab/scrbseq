@@ -8,6 +8,7 @@
 
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/device/file.hpp> 
 
 typedef boost::iostreams::filtering_ostream OutStream;
 
@@ -29,24 +30,18 @@ std::string unmapped_reads_fq;
 
 OutStream* addStream(const std::string& filename)
 {
-  std::ofstream *fileOut = new std::ofstream(
-      filename.c_str(), 
-      std::ios_base::binary | std::ios_base::out);
-  
-  if (!fileOut->good())
-  {
-    return NULL;
-  }
-
+  // http://boost.2283326.n4.nabble.com/Writing-large-binary-files-with-boost-gzip-td3434404.html
   OutStream *out = new OutStream();
   out->push(boost::iostreams::gzip_compressor());
-  out->push(*fileOut);
+  out->push(boost::iostreams::file_sink(filename));
   return out;
 }
 
 
 int openBarcodeStreams(const std::string& filename, const std::string& prefix)
 {
+
+
   std::cerr<<"Reading Barcodes from " << filename << std::endl;
   std::ifstream bcFile(filename.c_str());
   if (!bcFile.good())
@@ -83,6 +78,7 @@ int parseFastQFile(const std::string& fq_file)
   {
     std::cerr << "File " << fq_file << " could not be opened" << std::endl;
   }
+  ifile.close();
 
   unsigned int records = 0;
   
@@ -94,10 +90,14 @@ int parseFastQFile(const std::string& fq_file)
     
     boost::iostreams::filtering_istream in;
     in.push(boost::iostreams::gzip_decompressor());
-    in.push(ifile);
+    in.push(boost::iostreams::file_source(fq_file));
     
     long lines = 0;
-    std::string read_name(256), bases(256), qualities(256), extra(256);
+    std::string read_name, bases, qualities, extra;
+    read_name.reserve(256);
+    bases.reserve(256);
+    qualities.reserve(256);
+    extra.reserve(256);
     while (in.good())
     {
       //and str.find("_") != std::string::npos
@@ -106,7 +106,7 @@ int parseFastQFile(const std::string& fq_file)
       std::getline(in, qualities);
       std::getline(in, extra);
       
-      if ( not (lines % 4 == 0 and !str.empty() and read_name[0] == '@'))
+      if ( not (lines % 4 == 0 and not read_name.empty() and read_name[0] == '@'))
       {
         std::cerr << "Error reading in FastQ file" << std::endl;
         return 1;
@@ -117,7 +117,7 @@ int parseFastQFile(const std::string& fq_file)
       boost::split(fields, read_name, boost::is_any_of("_"));
       if(fields.size() < 2)
       {
-        std::cerr << str << std::endl;
+        std::cerr << read_name << std::endl;
         std::cerr <<  "Line not properly formatted, did UMI tools run? " << std::endl;
         return 1;
       }
