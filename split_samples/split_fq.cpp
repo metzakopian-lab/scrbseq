@@ -98,7 +98,7 @@ int parseFastQFile(const std::string& fq_file)
     bases.reserve(256);
     qualities.reserve(256);
     extra.reserve(256);
-    while (in.good() and records < 10000000)
+    while (in.good())
     {
       //and str.find("_") != std::string::npos
       std::getline(in, read_name);
@@ -106,7 +106,7 @@ int parseFastQFile(const std::string& fq_file)
       std::getline(in, qualities);
       std::getline(in, extra);
       
-      if ( not (lines % 4 == 0 and not read_name.empty() and read_name[0] == '@'))
+      if ( (not read_name.empty()) and read_name[0] != '@')
       {
         std::cerr << "Error reading in FastQ file" << std::endl;
         return 1;
@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
     std::cerr << "Usage:" << argv[0] << " <UMI_TOOLS input fastq file> <manifest.csv (sample_name, barcode)> <output-prefix>" << std::endl;
     return 1;
   }
-  
+  std::cout << "Version 2" << std::endl;
   std::string fq_file = argv[1];
   std::string manifest = argv[2];
   std::string output_prefix = argv[3];
