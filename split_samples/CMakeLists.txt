@@ -5,7 +5,7 @@ project(SplitFiles)
 find_package(Boost 1.63.0 COMPONENTS iostreams system)
 add_executable(splitFQ split_fq.cpp)
 add_executable(splitSAM split_sam.cpp)
-add_executable(splitFQ split_fq_paired.cpp)
+add_executable(splitFQpaired split_fq_paired.cpp)
 
 
 set(CMAKE_CXX_STANDARD 11)
@@ -24,6 +24,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 target_link_libraries(splitFQ ${Boost_LIBRARIES})
 
 target_link_libraries(splitSAM ${Boost_LIBRARIES})
+target_link_libraries(splitFQpaired ${Boost_LIBRARIES})
 
 
 
