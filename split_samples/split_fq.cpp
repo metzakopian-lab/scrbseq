@@ -17,8 +17,46 @@ typedef boost::iostreams::filtering_ostream OutStream;
 typedef std::unordered_map<std::string, OutStream*> Streams;
 typedef std::unordered_map<std::string, std::pair<std::string, unsigned int>> Counts;
 
+typedef struct {
+  std::string read_name;
+  std::string bases;
+  std::string qualities;
+  std::string extra;
+  int reserve()
+  {
+    read_name.reserve(256);
+    bases.reserve(256);
+    qualities.reserve(256);
+    extra.reserve(256);
+    return 0;
+  }
 
+  int parseRead(std::istream& fq_stream)
+  {
+    
+    
+    std::getline(fq_stream, read_name);
+    std::getline(fq_stream, bases);
+    std::getline(fq_stream, qualities);
+    std::getline(fq_stream, extra);
+    // TODO check if valid reads can start with another character.
+    if ( (not read_name.empty()) and read_name[0] != '@')
+    {
+      std::cerr << "Error reading in FastQ file" << std::endl;
+      return 1;
+    }
+    return 0;
+  }
+  int dumpRead(std::ostream& fq_stream){
+    
+    fq_stream << read_name << std::endl;
+    fq_stream << bases << std::endl;
+    fq_stream << qualities << std::endl;
+    fq_stream << extra << std::endl;
+    return 0;
+  }
 
+} FastQ;
 
 Streams barcodes;
 Counts reads;
@@ -93,31 +131,20 @@ int parseFastQFile(const std::string& fq_file)
     in.push(boost::iostreams::file_source(fq_file));
     
     long lines = 0;
-    std::string read_name, bases, qualities, extra;
-    read_name.reserve(256);
-    bases.reserve(256);
-    qualities.reserve(256);
-    extra.reserve(256);
+    FastQ read;
+    read.reserve();
+    
     while (in.good())
     {
       //and str.find("_") != std::string::npos
-      std::getline(in, read_name);
-      std::getline(in, bases);
-      std::getline(in, qualities);
-      std::getline(in, extra);
-      
-      if ( (not read_name.empty()) and read_name[0] != '@')
-      {
-        std::cerr << "Error reading in FastQ file" << std::endl;
-        return 1;
-      }
+      read.parseRead(in);    
 
       
       std::vector<std::string> fields;
-      boost::split(fields, read_name, boost::is_any_of("_"));
+      boost::split(fields, read.read_name, boost::is_any_of("_"));
       if(fields.size() < 2)
       {
-        std::cerr << read_name << std::endl;
+        std::cerr << read.read_name << std::endl;
         std::cerr <<  "Line not properly formatted, did UMI tools run? " << std::endl;
         return 1;
       }
@@ -134,14 +161,7 @@ int parseFastQFile(const std::string& fq_file)
       // Forward record to the relevant file
       auto it = barcodes.find(sample_id);
       auto stream = it == barcodes.end() ? barcodes.at(undetermined) : it->second;
-      
-      if (bases.size() > 8)
-      {
-        *stream << read_name << std::endl;
-        *stream << bases << std::endl;
-        *stream << qualities << std::endl;
-        *stream << extra << std::endl;
-      }
+      read.dumpRead(*stream);
       
       // Report progress
       if (++records % 500000 == 0)
