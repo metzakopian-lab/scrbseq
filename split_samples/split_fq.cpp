@@ -92,9 +92,7 @@ int parseFastQFile(const std::string& fq_file)
     in.push(boost::iostreams::gzip_decompressor(boost::iostreams::zlib::default_window_bits, 4*BUFFER_SIZE));
     in.push(boost::iostreams::file_source(fq_file));
     
-    long lines = 0;
     FastQ read;
-    read.reserve();
     
     while (in.good())
     {

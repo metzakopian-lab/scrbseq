@@ -25,7 +25,9 @@ Counts reads;
 const std::string undetermined = "UNDETERMINED";
 std::string unmapped_reads_fq;
 
-
+// const std::string pattern ="CCCCCCXXXXXXXX";
+unsigned barcode_offset = 8;
+unsigned umi_offset = 14;
 
 
 OutStream* addStream(const std::string& filename)
@@ -70,8 +72,7 @@ int openBarcodeStreams(const std::string& filename, const std::string& prefix)
   return 0;
 }
 
-int parseFastQFile(const std::string& fq_file)
-{
+boost::iostreams::filtering_istream* openFastQ(const std::string& fq_file, bool gzip = true) {
   std::ifstream ifile(fq_file, std::ios_base::in | std::ios_base::binary);
 
   if (!ifile.good())
@@ -80,55 +81,78 @@ int parseFastQFile(const std::string& fq_file)
   }
   ifile.close();
 
-  unsigned int records = 0;
+  boost::iostreams::filtering_istream* in = new boost::iostreams::filtering_istream();
+  if (gzip) {
+    in->push(boost::iostreams::gzip_decompressor(
+        boost::iostreams::zlib::default_window_bits, 4 * BUFFER_SIZE));
+  }
+  in->push(boost::iostreams::file_source(fq_file));
+  return in;
+}
+// TODO
+bool areMates(FastQ& read1, FastQ& read2)
+{
+  // hash strings to cmpr
+  auto rname1 = read1.read_name.find(" ");
+  //calculate.hash for read1 to rname position
+  size_t hash1 = 0;
+  auto rname2 = read2.read_name.find(" ");
+  size_t hash2 = 0;
+  return hash1 == hash2;
+}
+
+int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_fq_file)
+{
   
+  unsigned int records = 0;
   try
   {
     
     std::string decompressedStringBuf;
 
     
-    boost::iostreams::filtering_istream in;
-    in.push(boost::iostreams::gzip_decompressor(boost::iostreams::zlib::default_window_bits, 4*BUFFER_SIZE));
-    in.push(boost::iostreams::file_source(fq_file));
+    auto& mRNA_stream = *openFastQ(mRNA_fq_file);
+    auto& barcode_stream = *openFastQ(barcode_fq_file);
     
     long lines = 0;
-    FastQ read;
-    read.reserve();
+    FastQ mRNA_read, barcode_read;
+
+    unsigned umi_size = umi_offset - barcode_offset;
     
-    while (in.good())
+    while (mRNA_stream.good() && barcode_stream.good())
     {
       //and str.find("_") != std::string::npos
-      read.parseRead(in);
-      std::vector<std::string> fields;
-      boost::split(fields, read.read_name, boost::is_any_of("_"));
-      if(fields.size() < 2)
-      {
-        std::cerr << read.read_name << std::endl;
-        std::cerr <<  "Line not properly formatted, did UMI tools run? " << std::endl;
+      if (mRNA_read.parseRead(mRNA_stream) ||
+          barcode_read.parseRead(barcode_stream)) {
+        continue;
+      }
+      if (!areMates(mRNA_read, barcode_read)) {
+        std::cerr << "Read Name do not match" << std::endl <<
+            "mRNA_read" << mRNA_read.read_name << std::endl <<
+            "barcode_read" << barcode_read.read_name <<std::endl;
         return 1;
       }
       
-      std::string sample_id = fields[1];
-      
+      std::string barcode = barcode_read.read_name.substr(barcode_offset);
+      std::string umi = barcode_read.read_name.substr(barcode_offset, umi_size);
+      mRNA_read.append_meta(barcode, umi);
       // Increment sample id
       {
-        auto read_it = reads.find(sample_id);
+        auto read_it = reads.find(barcode);
         auto& sample_reads = read_it == reads.end() ? reads.at(undetermined).second : read_it->second.second;
         ++sample_reads;
       }
 
       // Forward record to the relevant file
-      auto it = barcodes.find(sample_id);
+      auto it = barcodes.find(barcode);
       auto stream = it == barcodes.end() ? barcodes.at(undetermined) : it->second;
-      read.dumpRead(*stream);
+      mRNA_read.dumpRead(*stream);
       
       // Report progress
       if (++records % 500000 == 0)
       {
         std::cerr << "Read " << records << " records so far" << std::endl;
       }
-      
     }
     std::cerr << std::endl;
   }
@@ -165,11 +189,13 @@ int main(int argc, char* argv[])
 {
   if (argc != 4)
   {
-    std::cerr << "Usage:" << argv[0] << " <UMI_TOOLS input fastq file> <manifest.csv (sample_name, barcode)> <output-prefix>" << std::endl;
+    std::cerr << "Usage:" << argv[0] << " <mRNA fastq file> <barcode fastq file> <manifest.csv (sample_name, barcode)> <output-prefix>" << std::endl;
     return 1;
   }
   std::cout << "Version 2" << std::endl;
-  std::string fq_file = argv[1];
+  std::string mRNA_file = argv[1];
+  std::string barcode_file = argv[2];
+  
   std::string manifest = argv[2];
   std::string output_prefix = argv[3];
   if (openBarcodeStreams(manifest, output_prefix)) {
@@ -177,7 +203,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  if (parseFastQFile(fq_file)) {
+  if (parseFastQFile(mRNA_file, barcode_file)) {
     return 1;
   }
 
