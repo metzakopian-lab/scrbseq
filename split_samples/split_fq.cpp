@@ -9,6 +9,8 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/device/file.hpp>
+
+#include "FastQ.hpp"
 /// 64MB buffer size
 #define BUFFER_SIZE 2 << 26 
 
@@ -17,46 +19,6 @@ typedef boost::iostreams::filtering_ostream OutStream;
 typedef std::unordered_map<std::string, OutStream*> Streams;
 typedef std::unordered_map<std::string, std::pair<std::string, unsigned int>> Counts;
 
-typedef struct {
-  std::string read_name;
-  std::string bases;
-  std::string qualities;
-  std::string extra;
-  int reserve()
-  {
-    read_name.reserve(256);
-    bases.reserve(256);
-    qualities.reserve(256);
-    extra.reserve(256);
-    return 0;
-  }
-
-  int parseRead(std::istream& fq_stream)
-  {
-    
-    
-    std::getline(fq_stream, read_name);
-    std::getline(fq_stream, bases);
-    std::getline(fq_stream, qualities);
-    std::getline(fq_stream, extra);
-    // TODO check if valid reads can start with another character.
-    if ( (not read_name.empty()) and read_name[0] != '@')
-    {
-      std::cerr << "Error reading in FastQ file" << std::endl;
-      return 1;
-    }
-    return 0;
-  }
-  int dumpRead(std::ostream& fq_stream){
-    
-    fq_stream << read_name << std::endl;
-    fq_stream << bases << std::endl;
-    fq_stream << qualities << std::endl;
-    fq_stream << extra << std::endl;
-    return 0;
-  }
-
-} FastQ;
 
 Streams barcodes;
 Counts reads;
@@ -137,9 +99,7 @@ int parseFastQFile(const std::string& fq_file)
     while (in.good())
     {
       //and str.find("_") != std::string::npos
-      read.parseRead(in);    
-
-      
+      read.parseRead(in);
       std::vector<std::string> fields;
       boost::split(fields, read.read_name, boost::is_any_of("_"));
       if(fields.size() < 2)

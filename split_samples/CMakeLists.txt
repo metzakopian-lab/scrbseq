@@ -5,6 +5,8 @@ project(SplitFiles)
 find_package(Boost 1.63.0 COMPONENTS iostreams system)
 add_executable(splitFQ split_fq.cpp)
 add_executable(splitSAM split_sam.cpp)
+add_executable(splitFQ split_fq_paired.cpp)
+
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
