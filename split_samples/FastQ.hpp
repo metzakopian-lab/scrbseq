@@ -2,6 +2,8 @@
 #include <string>
 #include <iostream>
 
+#define EOF_ERROR 255
+#define UNDEFINED_ERROR 1
 
 class FastQRecord {
  private:
