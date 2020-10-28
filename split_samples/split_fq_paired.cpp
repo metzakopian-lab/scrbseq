@@ -19,8 +19,10 @@ SampleCounts reads;
 std::hash<std::string> hasher;
 
 // const std::string pattern ="CCCCCCXXXXXXXX";
-unsigned barcode_offset = 6;
-unsigned umi_offset = 14;
+unsigned barcode_offset = 0;
+unsigned barcode_size = 6;
+unsigned umi_offset = 6;
+unsigned umi_size = 8;
 
 
 inline bool areMates(FastQRecord& read1, FastQRecord& read2)
@@ -59,8 +61,8 @@ int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_f
         return 1;
       }
       // TODO check these guys work
-      std::string sample_barcode = barcode.getReadBases().substr(0, barcode_offset);
-      std::string umi = barcode.getReadBases().substr(barcode_offset);
+      std::string sample_barcode = barcode.getReadBases().substr(barcode_offset, barcode_size);
+      std::string umi = barcode.getReadBases().substr(umi_offset);
       
       mRNA.appendMeta(sample_barcode, umi);
       // Increment sample id
@@ -78,6 +80,8 @@ int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_f
       // Report progress
       if (++records % 500000 == 0)
       {
+        //std::cerr << "Barcode " << barcode.getReadBases() << " "<<sample_barcode << " " << umi << std::endl;
+        
         std::cerr << "Read " << records << " records so far" << std::endl;
       }
     }
@@ -121,7 +125,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  std::ios::sync_with_stdio(false);
+  ///std::ios::sync_with_stdio(false);
   if (parseFastQFile(mRNA_file, barcode_file)) {
     return 1;
   }

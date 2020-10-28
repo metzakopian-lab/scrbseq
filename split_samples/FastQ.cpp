@@ -49,9 +49,9 @@ int FastQRecord::parseRead(std::istream& fq_stream) {
 int FastQRecord::dumpRead(std::ostream& fq_stream) const
 {
   
-  fq_stream << read_name << read_rest << "\n"
-            << bases << "\n"
-            << qualities << "\n"
-            << extra << "\n";
+  fq_stream << read_name + read_rest + "\n"
+            + bases + "\n"
+            + qualities + "\n"
+      + extra << std::endl;
   return 0;
 }
