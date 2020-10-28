@@ -103,6 +103,8 @@ int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_f
 
 int main(int argc, char* argv[])
 {
+
+  
   if (argc != 5)
   {
     std::cerr << "Usage:" << argv[0] << " <mRNA fastq file> <barcode fastq file> <manifest.csv (sample_name, barcode)> <output-prefix>" << std::endl;
@@ -119,6 +121,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  std::ios::sync_with_stdio(false);
   if (parseFastQFile(mRNA_file, barcode_file)) {
     return 1;
   }
