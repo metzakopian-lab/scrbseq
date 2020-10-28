@@ -3,7 +3,11 @@ project(SplitFiles)
 
 #set(Boost_USE_STATIC_LIBS ON)
 #set(Boost_USE_STATIC_RUNTIME ON)
-find_package(Boost 1.63.0 COMPONENTS iostreams system)
+#set(ZLIB_USE_STATIC_LIBS ON)
+#set(ZLIB_USE_STATIC_RUNTIME ON)
+#find_package(ZLIB REQUIRED)
+#find_package(BZIP2 REQUIRED)
+find_package(Boost REQUIRED COMPONENTS iostreams system)
 add_executable(splitFQ
   split_fq.cpp
   io.cpp
@@ -35,9 +39,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 
 
-target_link_libraries(splitFQ ${Boost_LIBRARIES})
-target_link_libraries(splitSAM ${Boost_LIBRARIES})
-target_link_libraries(splitFQpaired ${Boost_LIBRARIES})
+target_link_libraries(splitFQ ${Boost_LIBRARIES} )
+target_link_libraries(splitSAM  ${Boost_LIBRARIES} )
+target_link_libraries(splitFQpaired ${Boost_LIBRARIES} )
 
 
 
