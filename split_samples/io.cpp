@@ -2,8 +2,10 @@
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
+
+#include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/device/file.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 
 #include "io.hpp"
 
@@ -52,21 +54,20 @@ int initializeSamples(const std::string& filename, const std::string& prefix, FQ
 
 
 FQIn* openFastQ(const std::string& fq_file, bool gzip) {
-  std::ifstream ifile(fq_file, std::ios_base::in | std::ios_base::binary);
-
-  if (!ifile.good())
+  std::ifstream* ifile = new std::ifstream(fq_file, std::ios_base::in | std::ios_base::binary);
+  if (!ifile->good())
   {
     std::cerr << "File " << fq_file << " could not be opened" << std::endl;
   }
-  ifile.close();
-
-  boost::iostreams::filtering_istream* in = new boost::iostreams::filtering_istream();
+  //ifile.close();
+     
+  auto in = new boost::iostreams::filtering_streambuf<boost::iostreams::input>();
   if (gzip) {
-    in->push(boost::iostreams::gzip_decompressor(
-        boost::iostreams::zlib::default_window_bits, 4 * BUFFER_SIZE));
+    in->push(boost::iostreams::gzip_decompressor());
   }
-  in->push(boost::iostreams::file_source(fq_file));
-  return in;
+  in->push(*ifile);
+  
+  return new std::istream(in);
 }
 
 

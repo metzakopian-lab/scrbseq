@@ -5,12 +5,11 @@
 
 
 #include <unordered_map>
-
 #include <boost/iostreams/filtering_stream.hpp>
 
 
 typedef boost::iostreams::filtering_ostream FQOut;
-typedef boost::iostreams::filtering_istream FQIn;
+typedef std::istream FQIn;
 
 
 typedef std::unordered_map<std::string, FQOut*> FQStreams;
