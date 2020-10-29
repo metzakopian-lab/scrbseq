@@ -37,7 +37,7 @@ int initializeSamples(const std::string& filename, const std::string& prefix, FQ
     boost::split(fields, str, boost::is_any_of(" ,"));
     std::string sample_name = fields[0];
     std::string barcode = fields[1];
-    std::string output_file = prefix + "-" + sample_name + ".fq.gz";
+    std::string output_file = prefix + sample_name + ".fq.gz";
     samples[barcode] = addStream(output_file);
     counts[barcode] = std::make_pair(sample_name, 0);
     
