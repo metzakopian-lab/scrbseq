@@ -40,10 +40,8 @@ int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_f
     
     auto& mRNA_stream = *openFastQ(mRNA_fq_file);
     auto& barcode_stream = *openFastQ(barcode_fq_file);
-    
+   
     FastQRecord mRNA, barcode;
-
-    unsigned umi_size = umi_offset - barcode_offset;
     
     while (mRNA_stream.good() && barcode_stream.good())
     {
