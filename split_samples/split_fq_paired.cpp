@@ -60,7 +60,7 @@ int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_f
       }
       // TODO check these guys work
       std::string sample_barcode = barcode.getReadBases().substr(barcode_offset, barcode_size);
-      std::string umi = barcode.getReadBases().substr(umi_offset);
+      std::string umi = barcode.getReadBases().substr(umi_offset, umi_size);
       
       mRNA.appendMeta(sample_barcode, umi);
       // Increment sample id
