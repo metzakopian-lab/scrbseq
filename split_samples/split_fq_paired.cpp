@@ -30,6 +30,21 @@ inline bool areMates(FastQRecord& read1, FastQRecord& read2)
   return hasher(read1.getReadName()) == hasher(read2.getReadName());
 }
 
+
+// Flush demultiplexed reads
+int flush_buffers()
+{
+  for (auto& b : barcodes)
+  {
+    auto stream = b.second;
+    stream->flush();
+    boost::iostreams::close(*stream);
+  }
+
+  return 0;
+}
+
+
 int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_fq_file)
 {  
   unsigned int records = 0;
@@ -75,12 +90,13 @@ int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_f
       auto stream = it == barcodes.end() ? barcodes.at(undetermined) : it->second;
       mRNA.dumpRead(*stream);
       
-      // Report progress
+      // Report progress and flush the buffers
       if (++records % 500000 == 0)
       {
         //std::cerr << "Barcode " << barcode.getReadBases() << " "<<sample_barcode << " " << umi << std::endl;
         
-        std::cerr << "Read " << records << " records so far" << std::endl;
+        std::cerr << "Scanned " << records << " reads so far" << std::endl;
+        flush_buffers();
       }
     }
     std::cerr << std::endl;
@@ -88,16 +104,13 @@ int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_f
   catch (const boost::iostreams::gzip_error& e )
   {
     std::cerr << e.what() << std::endl;
+    return 1;
   }
   
-  std::cerr << "Written " << records << " reads in total!" << std::endl;
-  std::cerr << "Flushing buffers" << std::endl;
-  for (auto& b : barcodes)
-  {
-    auto stream = b.second;
-    stream->flush();
-    boost::iostreams::close(*stream);
-  }
+  std::cerr << "Finished scanning! " << records << " reads in total!" << std::endl;
+  flush_buffers();
+  std::cerr << "Finished Final Flush" << std::endl;
+  
   return 0;
 }
 
