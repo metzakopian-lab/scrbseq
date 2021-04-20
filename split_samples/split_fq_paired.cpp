@@ -1,15 +1,10 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-
 #include <utility>
 #include <string>
-
-
 #include "FastQ.hpp"
 #include "io.hpp"
-
-
 #include <boost/iostreams/filter/gzip.hpp>
 
 FQStreams barcodes;
@@ -120,9 +115,9 @@ int main(int argc, char* argv[])
 {
 
   
-  if (argc != 5)
+  if (argc != 7)
   {
-    std::cerr << "Usage:" << argv[0] << " <mRNA fastq file> <barcode fastq file> <manifest.csv (sample_name, barcode)> <output-prefix>" << std::endl;
+    std::cerr << "Usage:" << argv[0] << "<mRNA fastq file> <barcode fastq file> <manifest.csv (sample_name, barcode)> <output-prefix> <barcode-size> <umi-size>" << std::endl;
     return 1;
   }
   std::cout << "Version 2" << std::endl;
@@ -131,21 +126,26 @@ int main(int argc, char* argv[])
   
   std::string manifest = argv[3];
   std::string output_prefix = argv[4];
+  
   if (initializeSamples(manifest, output_prefix, barcodes, reads)) {
     std::cerr << "Error in loading barcode file " << std::endl;
     return 1;
   }
 
+  barcode_size = std::stoi(argv[5]);
+  umi_size = std::stoi(argv[6]);
+  // Start the UMI straight after the Barcode
+  umi_offset = barcode_size;
+  
+  
   ///std::ios::sync_with_stdio(false);
   if (parseFastQFile(mRNA_file, barcode_file)) {
     return 1;
   }
 
   exportReadsPerSample(output_prefix, reads);
-  
   //std::ofstream outStream("test.out.gz", std::ios_base::binary);
   return 0;
-
 }
 
 
