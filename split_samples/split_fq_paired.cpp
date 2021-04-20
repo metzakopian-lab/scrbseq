@@ -91,7 +91,13 @@ int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_f
         //std::cerr << "Barcode " << barcode.getReadBases() << " "<<sample_barcode << " " << umi << std::endl;
         
         std::cerr << "Scanned " << records << " reads so far" << std::endl;
-        flush_buffers();
+        
+        // Flush buffers to avoid memory problems
+        for (auto& b : barcodes)
+        {
+          auto stream = b.second;
+          stream->flush();
+        }
       }
     }
     std::cerr << std::endl;
