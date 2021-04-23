@@ -5,13 +5,18 @@
 #include <string>
 #include "FastQ.hpp"
 #include "io.hpp"
+
 #include <boost/iostreams/filter/gzip.hpp>
+#include <boost/program_options.hpp>
 
 FQStreams barcodes;
 SampleCounts reads;
 
 
 std::hash<std::string> hasher;
+
+namespace po = boost::program_options;
+
 
 // const std::string pattern ="CCCCCCXXXXXXXX";
 unsigned barcode_offset = 0;
@@ -58,7 +63,7 @@ int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_f
       //and str.find("_") != std::string::npos
       auto R1 = mRNA.parseRead(mRNA_stream);
       auto R2 = barcode.parseRead(barcode_stream);
-      if ( R1 || R2) {
+      if( R1 || R2) {
         continue;
       }
       
@@ -87,9 +92,7 @@ int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_f
       
       // Report progress and flush the buffers
       if (++records % 500000 == 0)
-      {
-        //std::cerr << "Barcode " << barcode.getReadBases() << " "<<sample_barcode << " " << umi << std::endl;
-        
+      { 
         std::cerr << "Scanned " << records << " reads so far" << std::endl;
         
         // Flush buffers to avoid memory problems
@@ -116,35 +119,38 @@ int parseFastQFile(const std::string& mRNA_fq_file, const std::string& barcode_f
 }
 
 
-
 int main(int argc, char* argv[])
 {
+  std::string mRNA_file, barcode_file, manifest, output_prefix;
+  
 
-  
-  if (argc != 7)
+  po::variables_map vm;
+    po::options_description desc{"Options"};
+    desc.add_options()
+        ("help,h", "prints this help message")
+        ("manifest,m", po::value<std::string>(&manifest)->required(), "csv containing the sample and barcodes")
+        ("rna-file,r", po::value<std::string>(&mRNA_file)->required(), "Gzipped fastq file containing RNA content reads")
+        ("barcode-file,b", po::value<std::string>(&barcode_file)->required(), "Gzipped fastq file containing barcode data immediately followed by UMI data")
+        ("barcode-length", po::value(&barcode_size)->default_value(6), "Barcode size in nucleotides file reads")
+        ("umi-length", po::value(&umi_size)->default_value(8), "UMI length in nucleotides file reads");
+    
+  try
   {
-    std::cerr << "Usage:" << argv[0] << "<mRNA fastq file> <barcode fastq file> <manifest.csv (sample_name, barcode)> <output-prefix> <barcode-size> <umi-size>" << std::endl;
-    return 1;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
   }
-  std::cout << "Version 2" << std::endl;
-  std::string mRNA_file = argv[1];
-  std::string barcode_file = argv[2];
-  
-  std::string manifest = argv[3];
-  std::string output_prefix = argv[4];
+  catch(const po::error &ex){ 
+    std::cerr << ex.what() << std::endl;
+  }
+
+  umi_offset = barcode_size;
   
   if (initializeSamples(manifest, output_prefix, barcodes, reads)) {
     std::cerr << "Error in loading barcode file " << std::endl;
     return 1;
   }
 
-  barcode_size = std::stoi(argv[5]);
-  umi_size = std::stoi(argv[6]);
-  // Start the UMI straight after the Barcode
-  umi_offset = barcode_size;
   
-  
-  ///std::ios::sync_with_stdio(false);
   if (parseFastQFile(mRNA_file, barcode_file)) {
     return 1;
   }

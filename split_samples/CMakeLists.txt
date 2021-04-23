@@ -7,7 +7,7 @@ project(SplitFiles)
 #set(ZLIB_USE_STATIC_RUNTIME ON)
 #find_package(ZLIB REQUIRED)
 #find_package(BZIP2 REQUIRED)
-find_package(Boost REQUIRED COMPONENTS iostreams system)
+find_package(Boost REQUIRED COMPONENTS iostreams system program_options)
 add_executable(splitFQ
   split_fq.cpp
   io.cpp
